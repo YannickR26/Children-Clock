@@ -88,8 +88,13 @@ void HttpServer::set_config()
     if (!Configuration.decodeJsonFromFile(HTTPServer.webServer().arg("plain").c_str())) {
       Serial.println("Received new configuration !");
       HTTPServer.webServer().sendHeader("Access-Control-Allow-Origin", "*");
+      if (Configuration.saveConfig()) {
       // HTTPServer.webServer().send(200, "application/json", Configuration.encodeToJson());
-      HTTPServer.webServer().send(200, "application/json", "{\"result\":true}");
+        HTTPServer.webServer().send(200, "application/json", "{\"result\":true}");
+      }
+      else {
+        HTTPServer.webServer().send(200, "application/json", "{\"result\":false}");
+      }
     }
     else {
       Serial.println("Error, parsing JSON !");

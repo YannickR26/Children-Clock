@@ -1,7 +1,6 @@
 #ifndef _DFPLAYER_H_
 #define _DFPLAYER_H_
 
-#include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
 
 class DFPlayer {

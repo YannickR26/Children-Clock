@@ -1,5 +1,7 @@
 #include "DFPlayer.h"
 
+#include <SoftwareSerial.h>
+
 // Create Software Serial Port Com
 SoftwareSerial mySoftwareSerial(12, 14); // RX, TX
 

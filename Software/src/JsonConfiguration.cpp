@@ -61,7 +61,7 @@ bool JsonConfiguration::readConfig()
 
 bool JsonConfiguration::saveConfig()
 { 
-  DynamicJsonDocument _json(5000);
+  DynamicJsonDocument _json(6000);
 	encodeToJson(_json);
   
 	File configFile = SPIFFS.open("/config.json", "w");
@@ -79,7 +79,6 @@ bool JsonConfiguration::saveConfig()
 
 uint8_t JsonConfiguration::encodeToJson(JsonDocument &_json)
 {
-  // DynamicJsonDocument _json(5000);
   _json.clear();
   JsonObject global = _json.createNestedObject("global");
   global["hostname"]        = _hostname;
@@ -99,7 +98,8 @@ uint8_t JsonConfiguration::encodeToJson(JsonDocument &_json)
 
 uint8_t JsonConfiguration::decodeJsonFromFile(const char* input)
 {
-  DynamicJsonDocument _json(5000);
+  DynamicJsonDocument _json(6000);
+
   _json.clear();
   // Deserialize the JSON document
   DeserializationError error = deserializeJson(_json, input);
