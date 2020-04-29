@@ -69,6 +69,8 @@ MainApplication::~MainApplication()
 
 void MainApplication::setup(void)
 {
+  char text[50];
+
   delay(2000);
 
   Serial.println("Initializing...");
@@ -131,6 +133,7 @@ void MainApplication::setup(void)
   #endif
 
   int nbTry = 20;
+  Serial.print("Connecting Wifi...");
   while ((WiFi.status() != WL_CONNECTED) && nbTry) {
     delay(500);
     Serial.print(".");
@@ -139,17 +142,22 @@ void MainApplication::setup(void)
     drawProgress(val, "Connecting Wifi...");
   }
 
+  Serial.println();
   if (nbTry == 0 || !WiFi.isConnected()) {
     drawProgress(val, "Impossible to connect Wifi");
     Serial.println("Impossible to connect Wifi");
+    delay(2000);
+    ESP.reset();
   }
   else {
     // Wifi connected
-    Serial.print(" WiFi connected to: ");
-    Serial.println(WiFi.SSID());
+    sprintf(text, "WiFi connected to: %s", WiFi.SSID().c_str());
+    drawProgress(val, text);
+    Serial.println(text);
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
   }
+  delay(1000);
 
   // Launch Server HTTP and FTP
   drawProgress(80, "Launch Server...");
@@ -223,6 +231,12 @@ void MainApplication::handle(void)
   strip.handle();
 
   checkRules();
+
+  // if (!WiFi.isConnected()) {
+  //   WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
+  //   Serial.println("disconnected");
+  //   delay(1000);
+  // }
 
   if (touchController.isTouched(1000)) {
     TS_Point p = touchController.getPoint();
@@ -343,10 +357,10 @@ void MainApplication::updateNTP(void)
   printTime();
   Serial.println("Old Time");
 
-  Serial.print("UpdateNTP => ");
+  Serial.print("UpdateNTP...");
   configTime(UTC_OFFSET * 3600, 0, NTP_SERVERS);
   while (!time(nullptr)) {
-    Serial.print("#");
+    Serial.print(".");
     delay(50);
   }
   delay(100);
