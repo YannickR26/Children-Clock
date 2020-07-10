@@ -91,6 +91,7 @@ void drawTime() {
   int y = SCREEN_Y / 3;
 
   char time_str[20];
+  char date_str[20];
   char *dstAbbrev;
   time_t now = dstAdjusted.time(&dstAbbrev);
   struct tm *timeinfo = localtime(&now);
@@ -114,14 +115,13 @@ void drawTime() {
   }
 
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
-  //gfx.setFont(Schoolbell_Regular_24);
   gfx.setColor(MINI_WHITE);
-  /*String date = ctime(&now);
-  date = date.substring(0,11) + String(1900 + timeinfo->tm_year);
-  gfx.drawString(x, y, date);
-*/
   gfx.setFont(Schoolbell_Regular_48);
-  gfx.drawString(x, y, time_str);
+  gfx.drawString(x, y-10, time_str);
+
+  gfx.setFont(Schoolbell_Regular_24);
+  sprintf(date_str, "%02d/%02d/%d\n", timeinfo->tm_mday, timeinfo->tm_mon+1, timeinfo->tm_year+1900);
+  gfx.drawString(x, y+50, date_str);
 }
 
 void drawProgress(uint8_t percentage, String text)
