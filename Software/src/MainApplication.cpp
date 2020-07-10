@@ -5,8 +5,7 @@
 #include <simpleDSTadjust.h>
 #include <FS.h>
 
-#define ENABLE_OTA    // If defined, enable Arduino OTA code.
-//#define WIFI_MANAGER  // If defined, enable Wifi Manager
+// #define ENABLE_OTA    // If defined, enable Arduino OTA code.
 //#define WIFI_AP   // If defined, enable Wifi in AP Mode
 
 // OTA
@@ -94,13 +93,13 @@ void MainApplication::setup(void)
   strip.setAllColor(tColor());
   strip.setSpeed(10);
   strip.start();
-  delay(100);
+  delay(200);
 
   // Read configuration
   drawProgress(20, "Updating configuration...");
   Configuration.setup();
   // Configuration.restoreDefault();
-  delay(100);
+  delay(200);
 
   uint8_t val = 30;
   drawProgress(val, "Connecting Wifi...");
@@ -116,12 +115,15 @@ void MainApplication::setup(void)
     //if it does not connect it starts an access point with the specified name
     //here  "AutoConnectAP"
     //and goes into a blocking loop awaiting configuration
-    if (!_wifiManager.autoConnect()) {
+    if (!_wifiManager.autoConnect(Configuration._hostname.c_str(), Configuration._hostname.c_str())) {
       Serial.println("failed to connect and hit timeout");
       //reset and try again, or maybe put it to deep sleep
       board_systemRestart();
       delay(1000);
     }
+    
+    WiFi.enableAP(false);
+    WiFi.softAPdisconnect();
   #elif WIFI_AP
     Serial.println("Configuring Wifi access point...");
     WiFi.softAP(Configuration._hostname.c_str(), Configuration._passwd.c_str());
@@ -162,12 +164,12 @@ void MainApplication::setup(void)
   // Launch Server HTTP and FTP
   drawProgress(80, "Launch Server...");
   HTTPServer.setup();
-  delay(100);
+  delay(200);
 
   // Get Clock from NTP server
   drawProgress(90, "Updating time...");
   updateNTP();
-  delay(100);
+  delay(200);
 
   // Init MP3 player
   // _player.setup();
@@ -300,7 +302,7 @@ void MainApplication::checkRules(void)
 
 tRules& MainApplication::searchLastRules(void)
 {
-  tRules rule;
+  static tRules rule;
   int diffTime, oldDiffTime=9999;
 
   // Get current date time
@@ -351,17 +353,19 @@ void MainApplication::printTime(void)
   Serial.flush();
 }
 
-
 void MainApplication::updateNTP(void)
 {
+  time_t now = time(nullptr);
+
   printTime();
   Serial.println("Old Time");
 
   Serial.print("UpdateNTP...");
   configTime(UTC_OFFSET * 3600, 0, NTP_SERVERS);
-  while (!time(nullptr)) {
+  while (now < EPOCH_1_1_2019) {
+    now = time(nullptr);
     Serial.print(".");
-    delay(50);
+    delay(500);
   }
   delay(100);
   Serial.println(" Done !");
