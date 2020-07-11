@@ -1,5 +1,6 @@
-#include <FS.h>
+#include <LittleFS.h>
 #include <ESP8266mDNS.h>
+#include <ESP8266HTTPUpdateServer.h>
 
 #include "HttpServer.h"
 
@@ -8,6 +9,7 @@
 /********************************************************/
 
 HttpServer::HttpServer()
+    : _webServer(80), _httpUpdater(true)
 {
 }
 
@@ -23,23 +25,31 @@ void HttpServer::setup(void)
   _ftpServer.begin(Configuration._ftpLogin, Configuration._ftpPasswd);
   MDNS.addService("ftp", "tcp", 21);
 
-  _webServer.on("/config/reset", HTTP_GET, []() { 
+  _webServer.on("/restart", [&]() {
+    _webServer.sendHeader("Access-Control-Allow-Origin", "*");
+    _webServer.send(200, "text/plain", "ESP restart now !");
+    delay(1000);
+    ESP.restart();
+  });
+
+  _webServer.on("/config/reset", HTTP_GET, [&]() { 
     Configuration._tabRules.clear(); 
     Serial.println("Clear All Rules !");
-    HTTPServer.webServer().sendHeader("Access-Control-Allow-Origin", "*");
-	  HTTPServer.webServer().send(200, "application/json", "{\"result\":true}");
+    _webServer.sendHeader("Access-Control-Allow-Origin", "*");
+	  _webServer.send(200, "application/json", "{\"result\":true}");
   });
   _webServer.on("/config", HTTP_GET, HttpServer::get_config);
   _webServer.on("/config", HTTP_POST, HttpServer::set_config);
 
   //called when the url is not defined here
-  //use it to load content from SPIFFS
-  _webServer.onNotFound([]() {
-    if (!HTTPServer.handleFileRead(HTTPServer.webServer().uri())) {
-      HTTPServer.webServer().send(404, "text/plain", "File Not Found !");
+  //use it to load content from LittleFS
+  _webServer.onNotFound([&]() {
+    if (!HTTPServer.handleFileRead(_webServer.uri())) {
+      _webServer.send(404, "text/plain", "File Not Found !");
     }
   });
 
+  _httpUpdater.setup(&_webServer, String("/update"));
   _webServer.begin();
 }
 
@@ -113,10 +123,10 @@ bool HttpServer::handleFileRead(String path)
   }
   String contentType = HTTPServer.getContentType(path);       // Get the MIME type
   String pathWithGz = path + ".gz";
-  if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)) {     // If the file exists, either as a compressed archive, or normal
-    if (SPIFFS.exists(pathWithGz))                            // If there's a compressed version available
+  if (LittleFS.exists(pathWithGz) || LittleFS.exists(path)) {     // If the file exists, either as a compressed archive, or normal
+    if (LittleFS.exists(pathWithGz))                            // If there's a compressed version available
       path += ".gz";                                          // Use the compressed verion
-    File file = SPIFFS.open(path, "r");                       // Open the file
+    File file = LittleFS.open(path, "r");                       // Open the file
     HTTPServer.webServer().streamFile(file, contentType);     // Send it to the client
     file.close();                                             // Close the file again
     Serial.println(String("\tSent file: ") + path);

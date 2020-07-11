@@ -1,6 +1,7 @@
 #include <SPI.h>
 #include <ESP8266WiFi.h>
 #include <StreamString.h>
+#include <LittleFS.h>
 
 #define CFG_POWER  0b10100111
 #define CFG_TEMP0  0b10000111
@@ -116,15 +117,15 @@ bool board_runUpdate(Stream& in, uint32_t size, int command)
 
 void board_checkUpdate(void)
 {
-  //we look if a file named lighter.ino.bin is on the spiffs
+  //we look if a file named lighter.ino.bin is on the LittleFS
   //if yes we update the rom and delete the file
   String updateFilename = "/Reveil_enfants.ino.bin";
   Serial.println("Checking update file " + updateFilename);
-  if (SPIFFS.exists(updateFilename))
+  if (LittleFS.exists(updateFilename))
   {
     Serial.println("update file found");
     drawProgress(10, "Update file found");
-    File updateFile = SPIFFS.open(updateFilename, "r");
+    File updateFile = LittleFS.open(updateFilename, "r");
     Serial.println("running update");
     drawProgress(30, "running update");
     bool ret = board_runUpdate(updateFile, updateFile.size(), U_FLASH);  
@@ -134,7 +135,7 @@ void board_checkUpdate(void)
       drawProgress(80, "update finished");
       Serial.println("removing update file");
       drawProgress(90, "removing update file");
-      SPIFFS.remove(updateFilename);
+      LittleFS.remove(updateFilename);
       Serial.println("restarting");
       drawProgress(100, "restarting");
       board_systemRestart();

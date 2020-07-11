@@ -1,13 +1,9 @@
-#include <FS.h>
+#include <LittleFS.h>
 
 #include "JsonConfiguration.h"
 
 JsonConfiguration::JsonConfiguration()
 {
-  /* Initialize SPIFFS */
-  if (!SPIFFS.begin()) {
-    Serial.println("failed to initialize SPIFFS");
-  }
 }
 
 JsonConfiguration::~JsonConfiguration()
@@ -16,9 +12,18 @@ JsonConfiguration::~JsonConfiguration()
 
 void JsonConfiguration::setup(void)
 {
-  readConfig();
+   /* Initialize LittleFS */
+  if (!LittleFS.begin()) {
+    Serial.println("failed to initialize LittleFS, try to format");
+    LittleFS.format();
+    if (!LittleFS.begin())
+    {
+      Serial.println("definitely failed to initialize LittleFS !");
+      return;
+    }
+  }
 
-	if ((_hostname.length() == 0) || (_ftpLogin.length() == 0) || (_ftpPasswd.length() == 0)) {
+  if (!readConfig()) {
 		Serial.println("Invalid configuration values, restoring default values");
 		restoreDefault();
     return;
@@ -36,10 +41,10 @@ void JsonConfiguration::setup(void)
 
 bool JsonConfiguration::readConfig()
 {
-  Serial.println("Read Configuration file from SPIFFS...");
+  Serial.println("Read Configuration file from LittleFS...");
   
   // Open file
-  File configFile = SPIFFS.open("/config.json", "r");
+  File configFile = LittleFS.open("/config.json", "r");
   if (!configFile) {
     Serial.println("Failed to open config file");
     return false;
@@ -61,10 +66,11 @@ bool JsonConfiguration::readConfig()
 
 bool JsonConfiguration::saveConfig()
 { 
-  DynamicJsonDocument _json(6000);
+  uint16_t size = ESP.getMaxFreeBlockSize();
+  DynamicJsonDocument _json(size/2);
 	encodeToJson(_json);
   
-	File configFile = SPIFFS.open("/config.json", "w");
+	File configFile = LittleFS.open("/config.json", "w");
 	if (!configFile) {
 		Serial.println("Failed to open config file for writing");
 		return false;
@@ -98,7 +104,8 @@ uint8_t JsonConfiguration::encodeToJson(JsonDocument &_json)
 
 uint8_t JsonConfiguration::decodeJsonFromFile(const char* input)
 {
-  DynamicJsonDocument _json(6000);
+  uint16_t size = ESP.getMaxFreeBlockSize();
+  DynamicJsonDocument _json(size/2);
 
   _json.clear();
   // Deserialize the JSON document
