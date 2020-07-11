@@ -15,6 +15,10 @@
 int board_readNTC();
 float board_getPower();
 
+const String dayName[] = {"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"};
+const String monthName[] = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
+const String monthNameShort[] = {"Janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."};
+
 // defines the colors usable in the paletted 16 color frame buffer
 uint16_t palette[] = {ILI9341_BLACK,  // 0
                       ILI9341_WHITE,  // 1
@@ -91,7 +95,7 @@ void drawTime() {
   int y = SCREEN_Y / 3;
 
   char time_str[20];
-  char date_str[20];
+  char date_str[50];
   char *dstAbbrev;
   time_t now = dstAdjusted.time(&dstAbbrev);
   struct tm *timeinfo = localtime(&now);
@@ -117,10 +121,10 @@ void drawTime() {
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setColor(MINI_WHITE);
   gfx.setFont(Schoolbell_Regular_48);
-  gfx.drawString(x, y-10, time_str);
+  gfx.drawString(x, y-20, time_str);
 
   gfx.setFont(Schoolbell_Regular_24);
-  sprintf(date_str, "%02d/%02d/%d\n", timeinfo->tm_mday, timeinfo->tm_mon+1, timeinfo->tm_year+1900);
+  sprintf(date_str, "%s %02d %s\n", dayName[timeinfo->tm_wday-1].c_str(), timeinfo->tm_mday, monthName[timeinfo->tm_mon].c_str());
   gfx.drawString(x, y+50, date_str);
 }
 
