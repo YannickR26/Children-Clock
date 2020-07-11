@@ -2,6 +2,7 @@
 #define _HTTPSERVER_h
 
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPUpdateServer.h>
 #include <ESP8266FtpServer.h>
 #include "JsonConfiguration.h"
 
@@ -26,8 +27,9 @@ protected:
   static void set_config();
 
 private:
-  ESP8266WebServer  _webServer;
-  FtpServer         _ftpServer;
+  ESP8266WebServer          _webServer;
+  ESP8266HTTPUpdateServer   _httpUpdater;
+  FtpServer                 _ftpServer;
 };
 
 #if !defined(NO_GLOBAL_INSTANCES)
