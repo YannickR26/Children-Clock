@@ -15,9 +15,9 @@
 int board_readNTC();
 float board_getPower();
 
-const String dayName[] = {"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"};
-const String monthName[] = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
-const String monthNameShort[] = {"Janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."};
+const PROGMEM String dayName[] = {"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"};
+const PROGMEM String monthName[] = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
+const PROGMEM String monthNameShort[] = {"Janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."};
 
 // defines the colors usable in the paletted 16 color frame buffer
 uint16_t palette[] = {ILI9341_BLACK,  // 0
@@ -52,7 +52,7 @@ void screen_begin() {
 #define ILI9341_SWRESET 0x01
   tft.writecommand(ILI9341_SWRESET);  
   gfx.init();
-  gfx.fillBuffer(MINI_BLACK);
+  gfx.clear();
   gfx.setRotation(3);
   gfx.commit();
   
@@ -72,7 +72,7 @@ void touchCalibration() {
   Serial.println("Touchpad calibration .....");
   touchController.startCalibration(&calibration);
   while (!touchController.isCalibrationFinished()) {
-    gfx.fillBuffer(MINI_BLACK);
+    gfx.clear();
     gfx.setColor(MINI_YELLOW);
     gfx.setTextAlignment(TEXT_ALIGN_CENTER);
     gfx.drawString(140, 100, "Please calibrate\ntouch screen by\ntouch point");
@@ -80,7 +80,7 @@ void touchCalibration() {
     gfx.commit();
     yield();
   }
-  gfx.fillBuffer(MINI_BLACK);
+  gfx.clear();
   gfx.setColor(MINI_YELLOW);
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.drawString(140, 100, "Calibration successfull");
@@ -88,11 +88,9 @@ void touchCalibration() {
   touchController.saveCalibration();
 }
 
-
 // draws the clock
 void drawTime() {
   int x = SCREEN_X / 2;
-  int y = SCREEN_Y / 3;
 
   char time_str[20];
   char date_str[50];
@@ -100,6 +98,14 @@ void drawTime() {
   time_t now = dstAdjusted.time(&dstAbbrev);
   struct tm *timeinfo = localtime(&now);
 
+  // Draw Date
+  gfx.setTextAlignment(TEXT_ALIGN_CENTER);
+  gfx.setColor(MINI_WHITE);
+  gfx.setFont(Schoolbell_Regular_24);
+  sprintf(date_str, "%s %02d %s\n", dayName[timeinfo->tm_wday].c_str(), timeinfo->tm_mday, monthName[timeinfo->tm_mon].c_str());
+  gfx.drawString(x, 50, date_str);
+
+  // Draw Time
   if (IS_STYLE_12HR)
   {
     int hour = (timeinfo->tm_hour+11)%12+1;  // take care of noon and midnight
@@ -121,16 +127,33 @@ void drawTime() {
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setColor(MINI_WHITE);
   gfx.setFont(Schoolbell_Regular_48);
-  gfx.drawString(x, y-20, time_str);
+  gfx.drawString(x, 100, time_str);
+}
 
-  gfx.setFont(Schoolbell_Regular_24);
-  sprintf(date_str, "%s %02d %s\n", dayName[timeinfo->tm_wday-1].c_str(), timeinfo->tm_mday, monthName[timeinfo->tm_mon].c_str());
-  gfx.drawString(x, y+50, date_str);
+void drawRules(tRules previousRule, tRules nextRule)
+{
+  char txt[10];
+
+  sprintf(txt, "%02d:%02d\n", previousRule.hour, previousRule.min);
+  gfx.setTextAlignment(TEXT_ALIGN_CENTER);
+  gfx.setColor(MINI_WHITE);
+  gfx.drawString(35, 150, txt);
+  gfx.drawRect(10, 180, 50, 15);
+  gfx.setColor(MINI_BLUE);
+  gfx.fillRect(12, 182, 47, 12);
+
+  sprintf(txt, "%02d:%02d\n", nextRule.hour, nextRule.min);
+  gfx.setTextAlignment(TEXT_ALIGN_CENTER);
+  gfx.setColor(MINI_WHITE);
+  gfx.drawString(250, 150, txt);
+  gfx.drawRect(225, 180, 50, 15);
+  gfx.setColor(MINI_YELLOW);
+  gfx.fillRect(227, 182, 47, 12);
 }
 
 void drawProgress(uint8_t percentage, String text)
 {
-  gfx.fillBuffer(MINI_BLACK);
+  gfx.clear();
   gfx.setFont(ArialMT_Plain_16);
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setColor(MINI_YELLOW);
@@ -138,7 +161,7 @@ void drawProgress(uint8_t percentage, String text)
   gfx.setColor(MINI_WHITE);
   gfx.drawRect(10, 128, SCREEN_X - 20, 15);
   gfx.setColor(MINI_BLUE);
-  gfx.fillRect(12, 130, (SCREEN_X-24) * percentage / 100, 11);
+  gfx.fillRect(12, 130, (SCREEN_X-23) * percentage / 100, 12);
 
   gfx.commit();
 }
