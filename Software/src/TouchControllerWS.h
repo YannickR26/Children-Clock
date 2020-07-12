@@ -1,4 +1,3 @@
-#include <FS.h>
 #include <XPT2046_Touchscreen.h>
 
 #ifndef _TOUCH_CONTROLLERWSH_

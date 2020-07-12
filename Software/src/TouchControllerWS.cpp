@@ -1,3 +1,5 @@
+#include <LittleFS.h>
+
 #include "TouchControllerWS.h"
 
 TouchControllerWS::TouchControllerWS(XPT2046_Touchscreen *touchScreen) {
@@ -8,11 +10,11 @@ TouchControllerWS::TouchControllerWS(XPT2046_Touchscreen *touchScreen) {
 
 bool TouchControllerWS::loadCalibration() {
   // always use this to "mount" the filesystem
-  bool result = SPIFFS.begin();
-  Serial.println("SPIFFS opened: " + result);
+  bool result = LittleFS.begin();
+  Serial.println("LittleFS opened: " + result);
 
   // this opens the file in read-mode
-  File f = SPIFFS.open(calibFileName, "r");
+  File f = LittleFS.open(calibFileName, "r");
 
   if (!f) {
     return false;
@@ -35,10 +37,10 @@ bool TouchControllerWS::loadCalibration() {
 }
 
 bool TouchControllerWS::saveCalibration() {
-  SPIFFS.begin();
+  LittleFS.begin();
 
   // open the file in write mode
-  File f = SPIFFS.open(calibFileName, "w");
+  File f = LittleFS.open(calibFileName, "w");
 
   if (!f) {
     Serial.println("file creation failed");
