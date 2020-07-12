@@ -3,14 +3,13 @@
 #include <ESP8266mDNS.h>
 #include <StreamString.h>
 #include <simpleDSTadjust.h>
-#include <FS.h>
 
 // #define ENABLE_OTA    // If defined, enable Arduino OTA code.
 //#define WIFI_AP   // If defined, enable Wifi in AP Mode
 
 // OTA
 #ifdef ENABLE_OTA
-  #include <ArduinoOTA.h>
+#include <ArduinoOTA.h>
 #endif
 
 #include "JsonConfiguration.h"
@@ -23,8 +22,9 @@ simpleDSTadjust dstAdjusted(StartRule, EndRule);
 #include "screen.h"
 
 // Global variable for Tick
-bool    readyForNtpUpdate;
-bool    readyForScreenUpdate;
+static bool readyForNtpUpdate;
+static bool readyForScreenUpdate;
+static tRules currentRule, nextRule;
 
 // Ticker every 1 seconds
 void secTicker()
@@ -33,20 +33,23 @@ void secTicker()
   static int tickScreenUpdate = SCREEN_UPDATE_INTERVAL_SEC;
 
   tickNTPUpdate--;
-  if (tickNTPUpdate <= 0) {
+  if (tickNTPUpdate <= 0)
+  {
     readyForNtpUpdate = true;
     tickNTPUpdate = NTP_UPDATE_INTERVAL_SEC;
   }
 
   tickScreenUpdate--;
-  if (tickScreenUpdate <= 0) {
+  if (tickScreenUpdate <= 0)
+  {
     readyForScreenUpdate = true;
     tickScreenUpdate = SCREEN_UPDATE_INTERVAL_SEC;
   }
 }
 
 //gets called when WiFiManager enters configuration mode
-void configModeCallback(WiFiManager *myWiFiManager) {
+void configModeCallback(WiFiManager *myWiFiManager)
+{
   drawProgress(50, "Launch Wifi in AP Mode...");
   Serial.println("Entered config mode");
   Serial.println(WiFi.softAPIP());
@@ -57,9 +60,10 @@ void configModeCallback(WiFiManager *myWiFiManager) {
 MainApplication::MainApplication()
 {
   delay(500);
-  
+
   Serial.begin(115200);
-  while (!Serial); // wait for serial attach
+  while (!Serial)
+    ; // wait for serial attach
 }
 
 MainApplication::~MainApplication()
@@ -103,40 +107,42 @@ void MainApplication::setup(void)
 
   uint8_t val = 30;
   drawProgress(val, "Connecting Wifi...");
-  #ifdef WIFI_MANAGER
-    // Connect to Wifi client
-    _wifiManager.setDebugOutput(true);
-    //reset settings - for testing
-    //_wifiManager.resetSettings();
+#ifdef WIFI_MANAGER
+  // Connect to Wifi client
+  _wifiManager.setDebugOutput(true);
+  //reset settings - for testing
+  //_wifiManager.resetSettings();
 
-    //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
-    _wifiManager.setAPCallback(configModeCallback);
-    //fetches ssid and pass and tries to connect
-    //if it does not connect it starts an access point with the specified name
-    //here  "AutoConnectAP"
-    //and goes into a blocking loop awaiting configuration
-    if (!_wifiManager.autoConnect(Configuration._hostname.c_str(), Configuration._hostname.c_str())) {
-      Serial.println("failed to connect and hit timeout");
-      //reset and try again, or maybe put it to deep sleep
-      board_systemRestart();
-      delay(1000);
-    }
-    
-    WiFi.enableAP(false);
-    WiFi.softAPdisconnect();
-  #elif WIFI_AP
-    Serial.println("Configuring Wifi access point...");
-    WiFi.softAP(Configuration._hostname.c_str(), Configuration._passwd.c_str());
-    Serial.print("AP IP address: ");
-    Serial.println(WiFi.softAPIP());
-  #else
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
-  #endif
+  //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+  _wifiManager.setAPCallback(configModeCallback);
+  //fetches ssid and pass and tries to connect
+  //if it does not connect it starts an access point with the specified name
+  //here  "AutoConnectAP"
+  //and goes into a blocking loop awaiting configuration
+  if (!_wifiManager.autoConnect(Configuration._hostname.c_str(), Configuration._hostname.c_str()))
+  {
+    Serial.println("failed to connect and hit timeout");
+    //reset and try again, or maybe put it to deep sleep
+    board_systemRestart();
+    delay(1000);
+  }
+
+  WiFi.enableAP(false);
+  WiFi.softAPdisconnect();
+#elif WIFI_AP
+  Serial.println("Configuring Wifi access point...");
+  WiFi.softAP(Configuration._hostname.c_str(), Configuration._passwd.c_str());
+  Serial.print("AP IP address: ");
+  Serial.println(WiFi.softAPIP());
+#else
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
+#endif
 
   int nbTry = 20;
   Serial.print("Connecting Wifi...");
-  while ((WiFi.status() != WL_CONNECTED) && nbTry) {
+  while ((WiFi.status() != WL_CONNECTED) && nbTry)
+  {
     delay(500);
     Serial.print(".");
     nbTry--;
@@ -145,13 +151,15 @@ void MainApplication::setup(void)
   }
 
   Serial.println();
-  if (nbTry == 0 || !WiFi.isConnected()) {
+  if (nbTry == 0 || !WiFi.isConnected())
+  {
     drawProgress(val, "Impossible to connect Wifi");
     Serial.println("Impossible to connect Wifi");
     delay(2000);
     ESP.reset();
   }
-  else {
+  else
+  {
     // Wifi connected
     sprintf(text, "WiFi connected to: %s", WiFi.SSID().c_str());
     drawProgress(val, text);
@@ -177,57 +185,62 @@ void MainApplication::setup(void)
   // Search last rules and Apply it
   applyRule(searchLastRules());
 
-  // Init OTA
-  #ifdef ENABLE_OTA
-    Serial.println("Arduino OTA activated.");
-    
-    // Port defaults to 8266
-    ArduinoOTA.setPort(8266);
-  
-    // Hostname defaults to esp8266-[ChipID]
-    ArduinoOTA.setHostname(Configuration._hostname.c_str());
-  
-    // No authentication by default
-    //ArduinoOTA.setPassword("admin");
-  
-    // Password can be set with it's md5 value as well
-    // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-    // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
-  
-    ArduinoOTA.onStart([&]() {
-      strip.setMode(MODE_FADE_IN_OUT);
-      strip.setBrightness(80);
-      strip.setAllColor(tColor(0, 127, 127));
-      Serial.println("Arduino OTA: Start updating");
-    });
-    ArduinoOTA.onEnd([]() {
-      Serial.println("Arduino OTA: End");
-    });
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Arduino OTA Progress: %u%%\r", (progress / (total / 100)));
-    });
-    ArduinoOTA.onError([](ota_error_t error) {
-      Serial.printf("Arduino OTA Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) Serial.println("Arduino OTA: Auth Failed");
-      else if (error == OTA_BEGIN_ERROR) Serial.println("Arduino OTA: Begin Failed");
-      else if (error == OTA_CONNECT_ERROR) Serial.println("Arduino OTA: Connect Failed");
-      else if (error == OTA_RECEIVE_ERROR) Serial.println("Arduino OTA: Receive Failed");
-      else if (error == OTA_END_ERROR) Serial.println("Arduino OTA: End Failed");
-    });
-  
-    ArduinoOTA.begin();
-  #endif
+// Init OTA
+#ifdef ENABLE_OTA
+  Serial.println("Arduino OTA activated.");
+
+  // Port defaults to 8266
+  ArduinoOTA.setPort(8266);
+
+  // Hostname defaults to esp8266-[ChipID]
+  ArduinoOTA.setHostname(Configuration._hostname.c_str());
+
+  // No authentication by default
+  //ArduinoOTA.setPassword("admin");
+
+  // Password can be set with it's md5 value as well
+  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
+
+  ArduinoOTA.onStart([&]() {
+    strip.setMode(MODE_FADE_IN_OUT);
+    strip.setBrightness(80);
+    strip.setAllColor(tColor(0, 127, 127));
+    Serial.println("Arduino OTA: Start updating");
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("Arduino OTA: End");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Arduino OTA Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Arduino OTA Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR)
+      Serial.println("Arduino OTA: Auth Failed");
+    else if (error == OTA_BEGIN_ERROR)
+      Serial.println("Arduino OTA: Begin Failed");
+    else if (error == OTA_CONNECT_ERROR)
+      Serial.println("Arduino OTA: Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR)
+      Serial.println("Arduino OTA: Receive Failed");
+    else if (error == OTA_END_ERROR)
+      Serial.println("Arduino OTA: End Failed");
+  });
+
+  ArduinoOTA.begin();
+#endif
   Serial.println("setup finished !");
 }
 
 void MainApplication::handle(void)
 {
   static int oldMillis;
-  
-  #ifdef ENABLE_OTA
-    ArduinoOTA.handle();
-  #endif
-  
+
+#ifdef ENABLE_OTA
+  ArduinoOTA.handle();
+#endif
+
   HTTPServer.handle();
   // _player.handle();
   strip.handle();
@@ -240,36 +253,41 @@ void MainApplication::handle(void)
   //   delay(1000);
   // }
 
-  if (touchController.isTouched(1000)) {
+  if (touchController.isTouched(1000))
+  {
     TS_Point p = touchController.getPoint();
     Serial.printf("Screen touched => x: %d, y: %d\n", p.x, p.y);
 
     //digitalWrite(TFT_LED, HIGH);
   }
 
-  if (readyForNtpUpdate) {
+  if (readyForNtpUpdate)
+  {
     updateNTP();
     readyForNtpUpdate = false;
   }
 
-  if (readyForScreenUpdate) {
-    gfx.fillBuffer(MINI_BLACK);
+  if (readyForScreenUpdate)
+  {
+    gfx.clear();
     //gfx.setColor(MINI_WHITE);
     //gfx.drawPalettedBitmapFromFile(10, 100, "SpriteFont_Calibri_Light_(72)_40x52.bmp");
     drawTime();
     drawBattery();
     drawWifiQuality();
     drawTemperature();
+    drawRules(currentRule, nextRule);
     gfx.commit();
     readyForScreenUpdate = false;
   }
 
   /* Read luminosity every 50 ms */
-  if (abs(millis() - oldMillis) > 50 ) {
+  if (abs(millis() - oldMillis) > 50)
+  {
     oldMillis = millis();
     // read the value from the sensor
     int sensorValue = analogRead(A0);
-    luminosity = luminosity*0.9 + map(sensorValue, 0, 1023, Configuration._maxIntensity, 1)*0.1;
+    luminosity = luminosity * 0.9 + map(sensorValue, 0, 1023, Configuration._maxIntensity, 1) * 0.1;
     strip.setBrightness(luminosity);
     // Serial.printf("sensorValue: %d, luminosity: %d, map: %d\n", sensorValue, luminosity, map(sensorValue, 0, 1023, 50, 1));
   }
@@ -280,7 +298,7 @@ void MainApplication::checkRules(void)
   // Get current date time
   char *dstAbbrev;
   time_t now = dstAdjusted.time(&dstAbbrev);
-  struct tm * timeinfo = localtime(&now);
+  struct tm *timeinfo = localtime(&now);
   static int previousTimeSec;
 
   // wait 1s passed
@@ -291,54 +309,74 @@ void MainApplication::checkRules(void)
 
   tRules curTime(timeinfo->tm_wday, timeinfo->tm_hour, timeinfo->tm_min);
 
-  for (std::vector<tRules>::iterator it = Configuration._tabRules.begin() ; it != Configuration._tabRules.end() ; ++it) {
-    if ((*it).enable) {
-      if ((*it) == curTime) {
+  for (std::vector<tRules>::iterator it = Configuration._tabRules.begin(); it != Configuration._tabRules.end(); ++it)
+  {
+    if ((*it).enable)
+    {
+      if ((*it) == curTime)
+      {
         applyRule((*it));
+        do
+        {
+          it++;
+          nextRule = (*it);
+        } while ((*it).enable == false);
+        Serial.println("next Rule: " + nextRule.toString());
+        break;
       }
     }
   }
 }
 
-tRules& MainApplication::searchLastRules(void)
+tRules &MainApplication::searchLastRules(void)
 {
   static tRules rule;
-  int diffTime, oldDiffTime=9999;
+  int diffTime, oldDiffTime = 9999;
+  std::vector<tRules>::iterator secondIt;
 
   // Get current date time
   char *dstAbbrev;
   time_t now = dstAdjusted.time(&dstAbbrev);
-  struct tm * timeinfo = localtime(&now);
-  
+  struct tm *timeinfo = localtime(&now);
+
   tRules curTime(timeinfo->tm_wday, timeinfo->tm_hour, timeinfo->tm_min);
-  
-  for (std::vector<tRules>::iterator it = Configuration._tabRules.begin() ; it != Configuration._tabRules.end() ; ++it) {
-    if ((*it).enable) {
-      diffTime = curTime-(*it);
-      if (diffTime < oldDiffTime) {
+
+  for (std::vector<tRules>::iterator it = Configuration._tabRules.begin(); it != Configuration._tabRules.end(); ++it)
+  {
+    if ((*it).enable)
+    {
+      diffTime = curTime - (*it);
+      if (diffTime < oldDiffTime)
+      {
         oldDiffTime = diffTime;
         rule = (*it);
+        secondIt = it;
+        do
+        {
+          secondIt++;
+          nextRule = (*secondIt);
+        } while ((*secondIt).enable == false);
       }
     }
   }
 
-  Serial.print("Last rule found is: ");
-  Serial.print(rule.toString().c_str());
-  Serial.printf(", after %d min\n", oldDiffTime);      
+  Serial.print("current Rule: " + rule.toString());
+  Serial.printf(", after %d min\n", oldDiffTime);
+  Serial.println("next Rule: " + nextRule.toString());
+
   return rule;
 }
 
-void MainApplication::applyRule(tRules &rule) 
+void MainApplication::applyRule(tRules &rule)
 {
-  static tRules curRule = tRules();
-  
-  if (rule == curRule) return;
+  if (rule == currentRule)
+    return;
 
-  curRule = rule;
-  strip.setAllColor(curRule.color);
+  currentRule = rule;
+  strip.setAllColor(currentRule.color);
   printTime();
   Serial.print("Change rules by: ");
-  Serial.println(curRule.toString().c_str());  
+  Serial.println(currentRule.toString().c_str());
 }
 
 void MainApplication::printTime(void)
@@ -346,7 +384,7 @@ void MainApplication::printTime(void)
   char buf[30];
   char *dstAbbrev;
   time_t t = dstAdjusted.time(&dstAbbrev);
-  struct tm *timeinfo = localtime (&t);
+  struct tm *timeinfo = localtime(&t);
 
   sprintf(buf, "%d, %d/%d/%d, %02d:%02d:%02d %s => ", timeinfo->tm_wday, timeinfo->tm_mday, timeinfo->tm_mon + 1, timeinfo->tm_year + 1900, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, dstAbbrev);
   Serial.print(buf);
@@ -362,7 +400,8 @@ void MainApplication::updateNTP(void)
 
   Serial.print("UpdateNTP...");
   configTime(UTC_OFFSET * 3600, 0, NTP_SERVERS);
-  while (now < EPOCH_1_1_2019) {
+  while (now < EPOCH_1_1_2019)
+  {
     now = time(nullptr);
     Serial.print(".");
     delay(500);
