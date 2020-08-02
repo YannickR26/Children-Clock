@@ -1,7 +1,11 @@
+#pragma once
+
 #include <SPI.h>
 #include <ESP8266WiFi.h>
 #include <StreamString.h>
 #include <LittleFS.h>
+
+#include "screen.h"
 
 #define CFG_POWER  0b10100111
 #define CFG_TEMP0  0b10000111
@@ -9,8 +13,6 @@
 #define CFG_AUX    0b11100111
 #define CFG_IRQ    0b11010010
 #define CFG_LIRQ   0b11010000
-
-void drawProgress(uint8_t percentage, String text);
 
 void XPT2046_EnableIrq(uint8_t q) {
     SPI.beginTransaction(SPISettings(2500000, MSBFIRST, SPI_MODE0));
@@ -27,7 +29,7 @@ uint32_t XPT2046_ReadRaw(uint8_t c) {
     digitalWrite(TFT_CS, HIGH);    
     SPI.beginTransaction(SPISettings(2500000, MSBFIRST, SPI_MODE0));
     digitalWrite(TOUCH_CS, 0);
-    SPI.transfer16(c) >> 3;
+    p = SPI.transfer16(c) >> 3;
     for(; i < 10; i++) {
       delay(2);
       p += SPI.transfer16(c) >> 3;
@@ -52,7 +54,7 @@ int board_readNTC() {
 float board_getPower() {
   static int i;
   static float p = 0;
-  float power;
+  float power = 0;
   //XPT2046_setCFG(CFG_POWER);
   if (!power) 
     power = XPT2046_ReadRaw(CFG_POWER) * ADC_vref * 4 / 4096;        

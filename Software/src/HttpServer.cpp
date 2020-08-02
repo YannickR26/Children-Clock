@@ -1,6 +1,5 @@
 #include <LittleFS.h>
 #include <ESP8266mDNS.h>
-#include <ESP8266HTTPUpdateServer.h>
 
 #include "HttpServer.h"
 

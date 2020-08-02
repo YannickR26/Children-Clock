@@ -1,5 +1,4 @@
-#ifndef _HTTPSERVER_h
-#define _HTTPSERVER_h
+#pragma once
 
 #include <ESP8266WebServer.h>
 #include <ESP8266HTTPUpdateServer.h>
@@ -36,6 +35,3 @@ private:
 #if !defined(NO_GLOBAL_INSTANCES)
 extern HttpServer HTTPServer;
 #endif
-
-#endif
-
