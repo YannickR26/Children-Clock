@@ -1,7 +1,9 @@
+#pragma once
+
 #include <MiniGrafx.h>
 #include <ILI9341_SPI.h>
 
-#include "TouchControllerWS.h"
+// #include "TouchControllerWS.h"
 #include "font.h"
 
 #define MINI_BLACK  0
@@ -15,9 +17,9 @@
 int board_readNTC();
 float board_getPower();
 
-const PROGMEM String dayName[] = {"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"};
-const PROGMEM String monthName[] = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
-const PROGMEM String monthNameShort[] = {"Janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."};
+const String dayName[] = {"Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"};
+const String monthName[] = {"Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"};
+const String monthNameShort[] = {"Janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."};
 
 // defines the colors usable in the paletted 16 color frame buffer
 uint16_t palette[] = {ILI9341_BLACK,  // 0
@@ -31,12 +33,12 @@ int BITS_PER_PIXEL = 2; // 2^2 =  4 colors
 ILI9341_SPI tft = ILI9341_SPI(TFT_CS, TFT_DC);
 MiniGrafx gfx = MiniGrafx(&tft, BITS_PER_PIXEL, palette);
 
-XPT2046_Touchscreen ts(TOUCH_CS, TOUCH_IRQ);
-TouchControllerWS touchController(&ts);
+// XPT2046_Touchscreen ts(TOUCH_CS, TOUCH_IRQ);
+// TouchControllerWS touchController(&ts);
 
-void touchCalibration();
-void calibrationCallback(int16_t x, int16_t y);
-CalibrationCallback calibration = &calibrationCallback;
+// void touchCalibration();
+// void calibrationCallback(int16_t x, int16_t y);
+// CalibrationCallback calibration = &calibrationCallback;
 
 void screen_begin() {
 
@@ -56,37 +58,37 @@ void screen_begin() {
   gfx.setRotation(3);
   gfx.commit();
   
-  ts.begin();
+  // ts.begin();
   /*boolean isCalibrationAvailable = touchController.loadCalibration();
   if (!isCalibrationAvailable) {
     touchCalibration();
   } */
 }
 
-void calibrationCallback(int16_t x, int16_t y) {
-  gfx.setColor(MINI_WHITE);
-  gfx.fillCircle(x, y, 10);
-}
+// void calibrationCallback(int16_t x, int16_t y) {
+//   gfx.setColor(MINI_WHITE);
+//   gfx.fillCircle(x, y, 10);
+// }
 
-void touchCalibration() {
-  Serial.println("Touchpad calibration .....");
-  touchController.startCalibration(&calibration);
-  while (!touchController.isCalibrationFinished()) {
-    gfx.clear();
-    gfx.setColor(MINI_YELLOW);
-    gfx.setTextAlignment(TEXT_ALIGN_CENTER);
-    gfx.drawString(140, 100, "Please calibrate\ntouch screen by\ntouch point");
-    touchController.continueCalibration();
-    gfx.commit();
-    yield();
-  }
-  gfx.clear();
-  gfx.setColor(MINI_YELLOW);
-  gfx.setTextAlignment(TEXT_ALIGN_CENTER);
-  gfx.drawString(140, 100, "Calibration successfull");
-  gfx.commit();
-  touchController.saveCalibration();
-}
+// void touchCalibration() {
+//   Serial.println("Touchpad calibration .....");
+//   touchController.startCalibration(&calibration);
+//   while (!touchController.isCalibrationFinished()) {
+//     gfx.clear();
+//     gfx.setColor(MINI_YELLOW);
+//     gfx.setTextAlignment(TEXT_ALIGN_CENTER);
+//     gfx.drawString(140, 100, "Please calibrate\ntouch screen by\ntouch point");
+//     touchController.continueCalibration();
+//     gfx.commit();
+//     yield();
+//   }
+//   gfx.clear();
+//   gfx.setColor(MINI_YELLOW);
+//   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
+//   gfx.drawString(140, 100, "Calibration successfull");
+//   gfx.commit();
+//   touchController.saveCalibration();
+// }
 
 // draws the clock
 void drawTime() {
@@ -127,7 +129,7 @@ void drawTime() {
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setColor(MINI_WHITE);
   gfx.setFont(Schoolbell_Regular_48);
-  gfx.drawString(x, 100, time_str);
+  gfx.drawString(x, 90, time_str);
 }
 
 void drawRules(tRules previousRule, tRules nextRule)
@@ -137,18 +139,24 @@ void drawRules(tRules previousRule, tRules nextRule)
   sprintf(txt, "%02d:%02d\n", previousRule.hour, previousRule.min);
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setColor(MINI_WHITE);
-  gfx.drawString(35, 150, txt);
-  gfx.drawRect(10, 180, 50, 15);
-  gfx.setColor(MINI_BLUE);
-  gfx.fillRect(12, 182, 47, 12);
+  gfx.drawString(35, 160, txt);
+  gfx.drawHorizontalLine(0, 160, 65);
+  gfx.drawLine(65, 160, 80, 175);
+  gfx.drawLine(65, 190, 80, 175);
+  gfx.drawHorizontalLine(0, 190, 65);
+  // gfx.setColor(MINI_BLUE);
 
   sprintf(txt, "%02d:%02d\n", nextRule.hour, nextRule.min);
   gfx.setTextAlignment(TEXT_ALIGN_CENTER);
   gfx.setColor(MINI_WHITE);
-  gfx.drawString(250, 150, txt);
-  gfx.drawRect(225, 180, 50, 15);
-  gfx.setColor(MINI_YELLOW);
-  gfx.fillRect(227, 182, 47, 12);
+  gfx.drawString(250, 160, txt);
+  gfx.drawHorizontalLine(205, 160, 80);
+  gfx.drawLine(205, 160, 220, 175);
+  gfx.drawLine(205, 190, 220, 175);
+  gfx.drawHorizontalLine(205, 190, 80);
+  // gfx.drawRect(220, 150, 60, 30);
+  // gfx.setColor(MINI_YELLOW);
+  // gfx.fillRect(227, 182, 47, 12);
 }
 
 void drawProgress(uint8_t percentage, String text)
