@@ -1,7 +1,5 @@
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h>
-#include <ESP8266mDNS.h>
-#include <StreamString.h>
+#include <Arduino.h>
+#include <WiFiManager.h>
 #include <simpleDSTadjust.h>
 
 // #define ENABLE_OTA    // If defined, enable Arduino OTA code.
@@ -20,32 +18,8 @@ simpleDSTadjust dstAdjusted(StartRule, EndRule);
 
 #include "board.h"
 #include "screen.h"
-
-// Global variable for Tick
-static bool readyForNtpUpdate;
-static bool readyForScreenUpdate;
-static tRules currentRule, nextRule;
-
-// Ticker every 1 seconds
-void secTicker()
-{
-  static int tickNTPUpdate = NTP_UPDATE_INTERVAL_SEC;
-  static int tickScreenUpdate = SCREEN_UPDATE_INTERVAL_SEC;
-
-  tickNTPUpdate--;
-  if (tickNTPUpdate <= 0)
-  {
-    readyForNtpUpdate = true;
-    tickNTPUpdate = NTP_UPDATE_INTERVAL_SEC;
-  }
-
-  tickScreenUpdate--;
-  if (tickScreenUpdate <= 0)
-  {
-    readyForScreenUpdate = true;
-    tickScreenUpdate = SCREEN_UPDATE_INTERVAL_SEC;
-  }
-}
+#include "Strip.h"
+#include "HttpServer.h"
 
 //gets called when WiFiManager enters configuration mode
 void configModeCallback(WiFiManager *myWiFiManager)
@@ -59,11 +33,6 @@ void configModeCallback(WiFiManager *myWiFiManager)
 
 MainApplication::MainApplication()
 {
-  delay(500);
-
-  Serial.begin(115200);
-  while (!Serial)
-    ; // wait for serial attach
 }
 
 MainApplication::~MainApplication()
@@ -73,16 +42,17 @@ MainApplication::~MainApplication()
 void MainApplication::setup(void)
 {
   char text[50];
+  
+  Serial.begin(115200);
+  while (!Serial)
+    ; // wait for serial attach
 
-  delay(2000);
+  delay(200);
 
   Serial.println("Initializing...");
   Serial.flush();
 
   // WiFi.disconnect();
-
-  // Ticker every 1 seconds
-  _tickerEvery1sec.attach(1, secTicker);
 
   // Init screen
   screen_begin();
@@ -108,18 +78,20 @@ void MainApplication::setup(void)
   uint8_t val = 30;
   drawProgress(val, "Connecting Wifi...");
 #ifdef WIFI_MANAGER
+  WiFiManager wm;
   // Connect to Wifi client
-  _wifiManager.setDebugOutput(true);
+  wm.setDebugOutput(true);
   //reset settings - for testing
-  //_wifiManager.resetSettings();
+  //wm.resetSettings();
 
   //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
-  _wifiManager.setAPCallback(configModeCallback);
+  wm.setAPCallback(configModeCallback);
   //fetches ssid and pass and tries to connect
   //if it does not connect it starts an access point with the specified name
   //here  "AutoConnectAP"
   //and goes into a blocking loop awaiting configuration
-  if (!_wifiManager.autoConnect(Configuration._hostname.c_str(), Configuration._hostname.c_str()))
+  wm.setConfigPortalTimeout(300); // Set Timeout for portal configuration to 300 seconds
+  if (!wm.autoConnect(Configuration._hostname.c_str(), Configuration._hostname.c_str()))
   {
     Serial.println("failed to connect and hit timeout");
     //reset and try again, or maybe put it to deep sleep
@@ -230,12 +202,15 @@ void MainApplication::setup(void)
 
   ArduinoOTA.begin();
 #endif
+
   Serial.println("setup finished !");
 }
 
 void MainApplication::handle(void)
 {
-  static int oldMillis;
+  static uint8_t noWifiConnection = 0;
+  static unsigned long oldMillis, oldTickScreen, oldTickNTP;
+  unsigned long currentMillis = millis();
 
 #ifdef ENABLE_OTA
   ArduinoOTA.handle();
@@ -245,51 +220,44 @@ void MainApplication::handle(void)
   // _player.handle();
   strip.handle();
 
-  checkRules();
-
-  // if (!WiFi.isConnected()) {
-  //   WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
-  //   Serial.println("disconnected");
-  //   delay(1000);
-  // }
-
-  if (touchController.isTouched(1000))
+  if (!WiFi.isConnected())
   {
-    TS_Point p = touchController.getPoint();
-    Serial.printf("Screen touched => x: %d, y: %d\n", p.x, p.y);
-
-    //digitalWrite(TFT_LED, HIGH);
+    if (noWifiConnection >= 10)
+    {
+      ESP.restart();
+    }
+    else
+    {
+      noWifiConnection++;
+    }
+    delay(100);
   }
-
-  if (readyForNtpUpdate)
+  else
   {
-    updateNTP();
-    readyForNtpUpdate = false;
-  }
-
-  if (readyForScreenUpdate)
-  {
-    gfx.clear();
-    //gfx.setColor(MINI_WHITE);
-    //gfx.drawPalettedBitmapFromFile(10, 100, "SpriteFont_Calibri_Light_(72)_40x52.bmp");
-    drawTime();
-    drawBattery();
-    drawWifiQuality();
-    drawTemperature();
-    drawRules(currentRule, nextRule);
-    gfx.commit();
-    readyForScreenUpdate = false;
+    noWifiConnection = 0;
   }
 
   /* Read luminosity every 50 ms */
-  if (abs(millis() - oldMillis) > 50)
+  if (abs(currentMillis - oldMillis) > 50)
   {
-    oldMillis = millis();
+    oldMillis = currentMillis;
     // read the value from the sensor
     int sensorValue = analogRead(A0);
-    luminosity = luminosity * 0.9 + map(sensorValue, 0, 1023, Configuration._maxIntensity, 1) * 0.1;
-    strip.setBrightness(luminosity);
+    _luminosity = _luminosity * 0.9 + map(sensorValue, 0, 1023, Configuration._maxIntensity, 1) * 0.1;
+    strip.setBrightness(_luminosity);
     // Serial.printf("sensorValue: %d, luminosity: %d, map: %d\n", sensorValue, luminosity, map(sensorValue, 0, 1023, 50, 1));
+  }
+
+  if (abs(currentMillis - oldTickScreen) >= (SCREEN_UPDATE_INTERVAL_SEC*1000))
+  {
+    updateScreen();
+    oldTickScreen = currentMillis;
+  }
+
+  if (abs(currentMillis - oldTickNTP) >= (NTP_UPDATE_INTERVAL_SEC*1000))
+  {
+    updateNTP();
+    oldTickNTP = currentMillis;
   }
 }
 
@@ -319,9 +287,9 @@ void MainApplication::checkRules(void)
         do
         {
           it++;
-          nextRule = (*it);
+          _nextRule = (*it);
         } while ((*it).enable == false);
-        Serial.println("next Rule: " + nextRule.toString());
+        Serial.println("next Rule: " + _nextRule.toString());
         break;
       }
     }
@@ -354,7 +322,7 @@ tRules &MainApplication::searchLastRules(void)
         do
         {
           secondIt++;
-          nextRule = (*secondIt);
+          _nextRule = (*secondIt);
         } while ((*secondIt).enable == false);
       }
     }
@@ -362,21 +330,21 @@ tRules &MainApplication::searchLastRules(void)
 
   Serial.print("current Rule: " + rule.toString());
   Serial.printf(", after %d min\n", oldDiffTime);
-  Serial.println("next Rule: " + nextRule.toString());
+  Serial.println("next Rule: " + _nextRule.toString());
 
   return rule;
 }
 
 void MainApplication::applyRule(tRules &rule)
 {
-  if (rule == currentRule)
+  if (rule == _currentRule)
     return;
 
-  currentRule = rule;
-  strip.setAllColor(currentRule.color);
+  _currentRule = rule;
+  strip.setAllColor(_currentRule.color);
   printTime();
   Serial.print("Change rules by: ");
-  Serial.println(currentRule.toString().c_str());
+  Serial.println(_currentRule.toString().c_str());
 }
 
 void MainApplication::printTime(void)
@@ -393,7 +361,8 @@ void MainApplication::printTime(void)
 
 void MainApplication::updateNTP(void)
 {
-  time_t now = time(nullptr);
+  char *dstAbbrev;
+  time_t now = dstAdjusted.time(&dstAbbrev);
 
   printTime();
   Serial.println("Old Time");
@@ -411,4 +380,17 @@ void MainApplication::updateNTP(void)
 
   printTime();
   Serial.println("New Time");
+}
+
+void MainApplication::updateScreen(void)
+{
+  checkRules();
+
+  gfx.clear();
+  drawTime();
+  drawBattery();
+  drawWifiQuality();
+  drawTemperature();
+  drawRules(_currentRule, _nextRule);
+  gfx.commit();
 }
