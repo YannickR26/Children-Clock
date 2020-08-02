@@ -1,5 +1,4 @@
-#ifndef _JSONCONFIGURATION_h
-#define _JSONCONFIGURATION_h
+#pragma once
 
 #include "tRules.h"
 #include <ArduinoJson.h>
@@ -35,6 +34,3 @@ class JsonConfiguration
 #if !defined(NO_GLOBAL_INSTANCES)
 extern JsonConfiguration Configuration;
 #endif
-
-#endif
-

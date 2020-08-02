@@ -1,5 +1,4 @@
-#ifndef _TRULES_H_
-#define _TRULES_H_
+#pragma once
 
 #include <ArduinoJson.h>
 
@@ -88,5 +87,3 @@ class tRules {
     uint8_t   min;
     uint8_t   smiley;
 };
-
-#endif

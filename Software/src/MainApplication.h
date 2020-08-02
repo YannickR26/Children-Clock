@@ -1,13 +1,7 @@
-#ifndef _MAINAPPLICATION_h
-#define _MAINAPPLICATION_h
-
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
-#include <Ticker.h>
+#pragma once
 
 #include "tRules.h"
-#include "HttpServer.h"
-#include "DFPlayer.h"
-#include "Strip.h"
+// #include "DFPlayer.h"
 
 class MainApplication
 {
@@ -18,19 +12,16 @@ class MainApplication
     void setup(void);
     void handle(void);
 
-  private:
+  protected:
     void checkRules(void);
     tRules& searchLastRules(void);
     void applyRule(tRules &rule);
     void printTime(void);
     void updateNTP(void);
+    void updateScreen(void);
 
   private:
-    Ticker              _tickerEvery1sec;
-    WiFiManager         _wifiManager;
-    DFPlayer            _player;
-    int                 luminosity;
+    tRules              _currentRule, _nextRule;
+    // DFPlayer            _player;
+    int                 _luminosity;
 };
-
-#endif
-

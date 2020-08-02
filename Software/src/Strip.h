@@ -1,5 +1,4 @@
-#ifndef _Strip_H_
-#define _Strip_H_
+#pragma once
 
 #include <Adafruit_NeoPixel.h>
 
@@ -76,6 +75,4 @@ class Strip : public Adafruit_NeoPixel {
 
 #if !defined(NO_GLOBAL_INSTANCES)
 extern Strip strip;
-#endif
-
 #endif
