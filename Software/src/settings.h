@@ -1,12 +1,11 @@
-#ifndef _Settings_H_
-#define _Settings_H_
+#pragma once
 
 // Setup Wifi
 String WIFI_SSID = "yourSSID";
 String WIFI_PASS = "yourPASS";
 
 int NTP_UPDATE_INTERVAL_SEC = 1 * 3600; // Update time from NTP server every 1 hours
-int SCREEN_UPDATE_INTERVAL_SEC = 2; // Update time from screen
+int SCREEN_UPDATE_INTERVAL_SEC = 5; // Update time from screen
 int SAVER_INTERVAL_SECS = 20;   // Going to screen saver after idle times, set 0 for dont screen saver.
 int SLEEP_INTERVAL_SECS = 30;   // Going to Sleep after idle times, set 0 for dont sleep.
 
@@ -44,5 +43,3 @@ bool IS_SHOW_SECONDS = false;
 //#define NTP_SERVERS "0.ch.pool.ntp.org", "1.ch.pool.ntp.org", "2.ch.pool.ntp.org"
 #define NTP_SERVERS "0.fr.pool.ntp.org", "time.nist.gov", "pool.ntp.org"
 #define EPOCH_1_1_2019  1546300800
-
-#endif
