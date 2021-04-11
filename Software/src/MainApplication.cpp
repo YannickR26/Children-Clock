@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <WiFiManager.h>
+#include <ESP_WiFiManager.h>
 #include <simpleDSTadjust.h>
 
 // #define ENABLE_OTA    // If defined, enable Arduino OTA code.
@@ -22,7 +22,7 @@ simpleDSTadjust dstAdjusted(StartRule, EndRule);
 #include "HttpServer.h"
 
 //gets called when WiFiManager enters configuration mode
-void configModeCallback(WiFiManager *myWiFiManager)
+void configModeCallback(ESP_WiFiManager *myWiFiManager)
 {
   drawProgress(50, "Launch Wifi in AP Mode...");
   Serial.println("Entered config mode");
@@ -78,7 +78,7 @@ void MainApplication::setup(void)
   uint8_t val = 30;
   drawProgress(val, "Connecting Wifi...");
 #ifdef WIFI_MANAGER
-  WiFiManager wm;
+  ESP_WiFiManager wm;
   // Connect to Wifi client
   wm.setDebugOutput(true);
   //reset settings - for testing
@@ -224,7 +224,8 @@ void MainApplication::handle(void)
   {
     if (noWifiConnection >= 10)
     {
-      ESP.restart();
+      // ESP.restart();
+      WiFi.reconnect();
     }
     else
     {
