@@ -169,7 +169,7 @@ void drawProgress(uint8_t percentage, String text)
   gfx.setColor(MINI_WHITE);
   gfx.drawRect(10, 128, SCREEN_X - 20, 15);
   gfx.setColor(MINI_BLUE);
-  gfx.fillRect(12, 130, (SCREEN_X-23) * percentage / 100, 12);
+  gfx.fillRect(12, 130, (SCREEN_X-23) * percentage / 100, 11);
 
   gfx.commit();
 }
